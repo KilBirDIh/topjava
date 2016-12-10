@@ -7,7 +7,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Month;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * GKislin
@@ -29,23 +32,12 @@ public class UserMealsUtil {
     }
 
     public static List<UserMealWithExceed>  getFilteredWithExceeded(List<UserMeal> mealList, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
-        // TODO return filtered list with correctly exceeded field
-        Map<LocalDate, Integer> mapOfCalories = new HashMap<>();
-        for(UserMeal user: mealList)
-        {
-            if(!mapOfCalories.containsKey(user.getDateTime().toLocalDate()))mapOfCalories.put(user.getDateTime().toLocalDate(), user.getCalories());
-            else mapOfCalories.put(user.getDateTime().toLocalDate(), mapOfCalories.get(user.getDateTime().toLocalDate()) + user.getCalories());
-        }
-        System.out.println(mapOfCalories);
-        List<UserMealWithExceed> finalList = new ArrayList<>();
-        for(UserMeal user: mealList)
-        {
-            boolean exceed;
-            if(mapOfCalories.get(user.getDateTime().toLocalDate()) <= caloriesPerDay) exceed = true;
-            else exceed = false;
-            if(TimeUtil.isBetween(user.getDateTime().toLocalTime(), startTime, endTime))
-            finalList.add(new UserMealWithExceed(user.getDateTime(), user.getDescription(), user.getCalories(), exceed));
-        }
-        return finalList;
+
+        Map<LocalDate, Integer> caloriesSumByDate = mealList.stream().collect(Collectors.groupingBy(um -> um.getDateTime().toLocalDate(), Collectors.summingInt(UserMeal::getCalories)));
+
+        return mealList.stream().filter(userMeal -> TimeUtil.isBetween(userMeal.getDateTime().toLocalTime(), startTime, endTime))
+                .map(userMeal1 -> new UserMealWithExceed(userMeal1.getDateTime(), userMeal1.getDescription(), userMeal1.getCalories(),
+                        caloriesSumByDate.get(userMeal1.getDateTime().toLocalDate())<= caloriesPerDay))
+                .collect(Collectors.toList());
     }
 }
